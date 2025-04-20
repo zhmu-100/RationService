@@ -4,7 +4,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class MealType{
+enum class MealType {
   MEAL_TYPE_UNSPECIFIED,
   MEAL_TYPE_BREAKFAST,
   MEAL_TYPE_LUNCH,
@@ -14,9 +14,10 @@ enum class MealType{
 
 @Serializable
 data class Meal(
-  val id: String,
+  val id: String = "",
+  val userId: String,
   val name: String,
   val mealType: MealType = MealType.MEAL_TYPE_UNSPECIFIED,
   val foods: List<Food> = emptyList(),
-  val data: LocalDateTime
+  val date: LocalDateTime
 )

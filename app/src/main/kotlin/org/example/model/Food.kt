@@ -3,22 +3,6 @@ package org.example.model
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class Vitamin(
-  val id: String,
-  val name: String,
-  val amount: Double,
-  val unit : String
-)
-
-@Serializable
-data class Mineral(
-  val id: String,
-  val name: String,
-  val amount: Double,
-  val unit: String
-)
-
-@Serializable
 data class Food(
   val id: String,
   val name: String,
@@ -26,10 +10,10 @@ data class Food(
   val calories: Double,
   val protein: Double,
   val carbs: Double,
-  val saturated_fats: Double,
-  val trans_fats: Double,
+  val saturatedFats: Double,
+  val transFats: Double,
   val fiber: Double,
   val sugar: Double,
-  val Vitamins: List<Vitamin> = emptyList(),
-  val Minerals: List<Mineral> = emptyList(),
+  val vitamins: List<Vitamin> = emptyList(),
+  val minerals: List<Mineral> = emptyList()
 )
