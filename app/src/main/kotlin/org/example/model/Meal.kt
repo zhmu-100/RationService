@@ -18,6 +18,6 @@ data class Meal(
     val userId: String,
     val name: String,
     val mealType: MealType = MealType.MEAL_TYPE_UNSPECIFIED,
-    val foods: List<Food> = emptyList(),
+    val foods: List<Food>,
     val date: LocalDateTime
 )
