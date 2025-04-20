@@ -12,6 +12,11 @@ import org.example.router.registerMealRoutes
 import org.example.service.FoodService
 import org.example.service.MealService
 
+/**
+ * Точка входа в приложение
+ *
+ * Дефолтный порт - 8002, см в. [application.conf]
+ */
 fun main() {
   embeddedServer(Netty, port = 8002) {
         install(ContentNegotiation) { json() }

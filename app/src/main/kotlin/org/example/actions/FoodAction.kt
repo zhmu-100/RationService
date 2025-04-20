@@ -13,6 +13,12 @@ import kotlinx.coroutines.withContext
 import org.example.dto.*
 import org.example.model.Food
 
+/**
+ * Реализация интерфейса [IFoodAction]. Может работать с локальной БД или через API Gateway
+ *
+ * @see IFoodAction
+ * @property config Конфигурация приложения, используется для определения адреса БД
+ */
 class FoodAction(config: ApplicationConfig) : IFoodAction {
 
   private val dbMode = config.propertyOrNull("ktor.database.mode")?.getString() ?: "LOCAL"
@@ -28,6 +34,12 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
 
   private val httpClient = HttpClient { install(ContentNegotiation) { json() } }
 
+  /**
+   * Создает новую еду
+   *
+   * @param food Еда для создания
+   * @return Созданная Еда
+   */
   override suspend fun createFood(food: Food): Food =
       withContext(Dispatchers.IO) {
         val requestBody =
@@ -56,6 +68,12 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
         if (dbResp.success == true) food else error(dbResp.error ?: "unknown error")
       }
 
+  /**
+   * Получает еду по идентификатору
+   *
+   * @param id Идентификатор еды
+   * @return Найденная еда или null, если не найдена
+   */
   override suspend fun getFood(id: String): Food? =
       withContext(Dispatchers.IO) {
         val body = DbReadRequest("foods", filters = mapOf("id" to id))
@@ -69,6 +87,13 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
         rows.firstOrNull()?.toModel()
       }
 
+  /**
+   * Возвращает всю еду, опционально отфильтрованные по имени.
+   *
+   * @param nameFilter Подстрока для поиска в названиях (`ignoreCase = true`). Если `null` или
+   * пустая — возвращаются все.
+   * @return Список объектов [Food].
+   */
   override suspend fun listFoods(nameFilter: String?): List<Food> =
       withContext(Dispatchers.IO) {
         val ormFilters = emptyMap<String, String>()
@@ -87,6 +112,12 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
         else foods.filter { it.name.contains(nameFilter, ignoreCase = true) }
       }
 
+  /**
+   * Удаляет еду по её идентификатору.
+   *
+   * @param id Идентификатор еды.
+   * @return `true`, если запись была успешно удалена, иначе `false`.
+   */
   override suspend fun deleteFood(id: String): Boolean =
       withContext(Dispatchers.IO) {
         val body = DbDeleteRequest("foods", "id = ?", listOf(id))
@@ -99,6 +130,7 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
             .success == true
       }
 
+  /** Преобразует DTO [DbFoodRow] в доменный объект [Food]. */
   private fun DbFoodRow.toModel() =
       Food(
           id = id,

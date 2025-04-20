@@ -14,6 +14,7 @@ import org.example.model.Food
 import org.example.model.Meal
 import org.example.service.IMealService
 
+/** Заглушка для еды С ней нужно что то придумать, мнен е нравится */
 private fun stubFood(id: String) =
     Food(
         id = id,
@@ -27,9 +28,20 @@ private fun stubFood(id: String) =
         fiber = 0.0,
         sugar = 0.0)
 
+/**
+ * REST роутер для работы с едой
+ *
+ * Эндпоинты:
+ * - GET diet/meals/{id} - Get meal by ID
+ * - GET diet/meals?user_id={userId} - List all meals for a specific user. Time filter can be
+ * applied by adding `&start=2022-01-01T00:00&end=2023-12-31T23:59`
+ * - POST diet/meals - Create a new meal
+ * - DELETE diet/meals/{id} - Delete meal by ID
+ */
 fun Application.registerMealRoutes(mealService: IMealService) {
   routing {
     route("/diet/meals") {
+      /** Создание нового приема пищи */
       post {
         val req = call.receive<CreateMealRequest>()
         val foods = req.foods.map { stubFood(it.id) }
@@ -45,6 +57,7 @@ fun Application.registerMealRoutes(mealService: IMealService) {
         call.respond(HttpStatusCode.Created, created)
       }
 
+      /** Получить прием пищи по ID */
       get("/{id}") {
         val id =
             call.parameters["id"]
@@ -59,6 +72,7 @@ fun Application.registerMealRoutes(mealService: IMealService) {
         call.respond(meal)
       }
 
+      /** Получает список всех приемов пищи для пользователя с учетом фильтрации по дате */
       get {
         val userId = call.request.queryParameters["user_id"]
         if (userId.isNullOrBlank())
@@ -77,6 +91,11 @@ fun Application.registerMealRoutes(mealService: IMealService) {
         call.respond(meals)
       }
 
+      /**
+       * Удаление приема пищи
+       *
+       * ID приема пищи передается в URL
+       */
       delete("/{id}") {
         val id =
             call.parameters["id"]

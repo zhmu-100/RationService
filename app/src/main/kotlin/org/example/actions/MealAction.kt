@@ -16,6 +16,12 @@ import org.example.dto.*
 import org.example.model.Meal
 import org.example.model.MealType
 
+/**
+ * Реализация интерфейса [IMealAction]. Может работать с локальной БД или через API Gateway
+ *
+ * @see IMealAction
+ * @property config Конфигурация приложения, используется для определения адреса БД
+ */
 class MealAction(private val config: ApplicationConfig) : IMealAction {
 
   private val dbMode = config.propertyOrNull("ktor.database.mode")?.getString() ?: "LOCAL"
@@ -31,6 +37,13 @@ class MealAction(private val config: ApplicationConfig) : IMealAction {
 
   private val httpClient = HttpClient { install(ContentNegotiation) { json() } }
 
+  /**
+   * Создает новый прием пищи
+   *
+   * @param meal Прием пищи для сохранения
+   * @return Сохраненный прием пищи
+   * @throws Exception если создание не удалось
+   */
   override suspend fun createMeal(meal: Meal): Meal =
       withContext(Dispatchers.IO) {
         val createMealReq =
@@ -70,6 +83,12 @@ class MealAction(private val config: ApplicationConfig) : IMealAction {
         meal
       }
 
+  /**
+   * Получает прием пищи по его ID
+   *
+   * @param id ID приема пищи
+   * @return Прием пищи или null, если он не найден
+   */
   override suspend fun getMeal(id: String): Meal? =
       withContext(Dispatchers.IO) {
         val mealRows: List<DbMealRow> =
@@ -115,6 +134,14 @@ class MealAction(private val config: ApplicationConfig) : IMealAction {
         baseMeal.copy(foods = foods)
       }
 
+  /**
+   * Получает список всех приемов пищи для пользователя с учетом фильтрации по дате
+   *
+   * @param userId ID пользователя
+   * @param start Начало диапазона дат
+   * @param end Конец диапазона дат
+   * @return List приемов пищи
+   */
   override suspend fun listMeals(
       userId: String,
       start: LocalDateTime,
@@ -162,6 +189,12 @@ class MealAction(private val config: ApplicationConfig) : IMealAction {
             .filter { it.date >= start && it.date <= end }
       }
 
+  /**
+   * Удаляет прием пищи
+   *
+   * @param id ID приема пищи
+   * @return true, если удален, иначе false
+   */
   override suspend fun deleteMeal(id: String): Boolean =
       withContext(Dispatchers.IO) {
         httpClient
@@ -173,6 +206,7 @@ class MealAction(private val config: ApplicationConfig) : IMealAction {
             .success == true
       }
 
+  /** Преобразует DTO [DbMealRow] в доменный объект [Meal]. */
   private fun DbMealRow.toModel() =
       Meal(
           id = id,
