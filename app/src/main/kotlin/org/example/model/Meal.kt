@@ -14,10 +14,10 @@ enum class MealType {
 
 @Serializable
 data class Meal(
-  val id: String = "",
-  val userId: String,
-  val name: String,
-  val mealType: MealType = MealType.MEAL_TYPE_UNSPECIFIED,
-  val foods: List<Food> = emptyList(),
-  val date: LocalDateTime
+    val id: String = "",
+    val userId: String,
+    val name: String,
+    val mealType: MealType = MealType.MEAL_TYPE_UNSPECIFIED,
+    val foods: List<Food> = emptyList(),
+    val date: LocalDateTime
 )
