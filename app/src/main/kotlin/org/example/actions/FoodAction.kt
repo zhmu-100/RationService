@@ -10,13 +10,17 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.example.dto.*
 import org.example.model.Food
 
 /**
- * Реализация интерфейса [IFoodAction]. Может работать с локальной БД или через API Gateway
+ * Реализация интерфейса [IFoodAction].
+ * Может работать с локальной БД или через API Gateway
  *
  * @see IFoodAction
+ * @constructor Принимает конфигурацию приложения.
  * @property config Конфигурация приложения, используется для определения адреса БД
  */
 class FoodAction(config: ApplicationConfig) : IFoodAction {
@@ -35,14 +39,15 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
   private val httpClient = HttpClient { install(ContentNegotiation) { json() } }
 
   /**
-   * Создает новую еду
+   * Создаёт новую еду и связанные с ней витамины и минералы.
    *
    * @param food Еда для создания
    * @return Созданная Еда
+   * @throws IllegalStateException если вставка в БД не удалась.
    */
   override suspend fun createFood(food: Food): Food =
       withContext(Dispatchers.IO) {
-        val requestBody =
+        val foodRequest =
             DbCreateRequest(
                 table = "foods",
                 data =
@@ -57,34 +62,74 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
                         "trans_fats" to food.transFats.toString(),
                         "fiber" to food.fiber.toString(),
                         "sugar" to food.sugar.toString()))
-        val url = "$baseUrl/create"
-        val response: HttpResponse =
-            httpClient.post(url) {
+        httpClient
+            .post("$baseUrl/create") {
               contentType(ContentType.Application.Json)
-              setBody(requestBody)
+              setBody(foodRequest)
             }
+            .body<DbResponse>()
+            .let { if (!it.success!!) error(it.error ?: "DB insert failed") }
 
-        val dbResp: DbResponse = response.body()
-        if (dbResp.success == true) food else error(dbResp.error ?: "unknown error")
+        for (vitamin in food.vitamins) {
+          httpClient.post("$baseUrl/create") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                DbCreateRequest(
+                    "vitamins",
+                    mapOf("id" to vitamin.id, "name" to vitamin.name, "unit" to vitamin.unit)))
+          }
+
+          httpClient.post("$baseUrl/create") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                DbCreateRequest(
+                    "food_vitamins",
+                    mapOf(
+                        "food_id" to food.id,
+                        "vitamin_id" to vitamin.id,
+                        "amount" to vitamin.amount.toString())))
+          }
+        }
+
+        for (mineral in food.minerals) {
+          httpClient.post("$baseUrl/create") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                DbCreateRequest(
+                    "minerals",
+                    mapOf("id" to mineral.id, "name" to mineral.name, "unit" to mineral.unit)))
+          }
+
+          httpClient.post("$baseUrl/create") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                DbCreateRequest(
+                    "food_minerals",
+                    mapOf(
+                        "food_id" to food.id,
+                        "mineral_id" to mineral.id,
+                        "amount" to mineral.amount.toString())))
+          }
+        }
+        food
       }
 
   /**
    * Получает еду по идентификатору
    *
    * @param id Идентификатор еды
-   * @return Найденная еда или null, если не найдена
+   * @return Найденная [Food] или null, если не найдена
    */
   override suspend fun getFood(id: String): Food? =
       withContext(Dispatchers.IO) {
-        val body = DbReadRequest("foods", filters = mapOf("id" to id))
-        val rows: List<DbFoodRow> =
-            httpClient
-                .post("$baseUrl/read") {
-                  contentType(ContentType.Application.Json)
-                  setBody(body)
-                }
-                .body()
-        rows.firstOrNull()?.toModel()
+        val response =
+            httpClient.post("$baseUrl/read") {
+              contentType(ContentType.Application.Json)
+              setBody(DbReadRequest("foods", filters = mapOf("id" to id)))
+            }
+        val foodRows: List<DbFoodRow> = response.body()
+        val food = foodRows.firstOrNull()?.toModel() ?: return@withContext null
+        food
       }
 
   /**
@@ -96,20 +141,15 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
    */
   override suspend fun listFoods(nameFilter: String?): List<Food> =
       withContext(Dispatchers.IO) {
-        val ormFilters = emptyMap<String, String>()
-        val body = DbReadRequest("foods", filters = ormFilters)
-
-        val allRows: List<DbFoodRow> =
+        val responseText =
             httpClient
                 .post("$baseUrl/read") {
                   contentType(ContentType.Application.Json)
-                  setBody(body)
+                  setBody(DbReadRequest("foods"))
                 }
-                .body()
-
-        val foods = allRows.map { it.toModel() }
-        return@withContext if (nameFilter.isNullOrBlank()) foods
-        else foods.filter { it.name.contains(nameFilter, ignoreCase = true) }
+                .bodyAsText()
+        val allFoods = Json.decodeFromString<List<DbFoodRow>>(responseText)
+        return@withContext allFoods.map { it.toModel() }
       }
 
   /**
@@ -142,5 +182,7 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
           saturatedFats = saturated_fats,
           transFats = trans_fats,
           fiber = fiber,
-          sugar = sugar)
+          sugar = sugar,
+          vitamins = vitamins ?: emptyList(),
+          minerals = minerals ?: emptyList())
 }

@@ -3,6 +3,8 @@ package org.example.dto
 import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.Serializable
 import org.example.model.MealType
+import org.example.model.Mineral
+import org.example.model.Vitamin
 
 /**
  * Строка в БД для блюда
@@ -33,6 +35,8 @@ data class DbMealRow(
  * @property trans_fats Транс ждиры
  * @property fiber Клетчатка
  * @property sugar Сахар
+ * @property vitamins Витамины
+ * @property minerals Минералы
  */
 @Serializable
 data class DbFoodRow(
@@ -45,7 +49,9 @@ data class DbFoodRow(
     val saturated_fats: Double,
     val trans_fats: Double,
     val fiber: Double,
-    val sugar: Double
+    val sugar: Double,
+    val vitamins: List<Vitamin>,
+    val minerals: List<Mineral>
 )
 
 /**

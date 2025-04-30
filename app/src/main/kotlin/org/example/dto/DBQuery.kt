@@ -21,7 +21,7 @@ import kotlinx.serialization.Serializable
 data class DbReadRequest(
     val table: String,
     val columns: List<String> = listOf("*"),
-    val filters: Map<String, String>? = null
+    val filters: Map<String, String> = emptyMap()
 )
 
 /**
