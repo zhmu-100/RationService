@@ -14,14 +14,16 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.example.dto.*
 import org.example.model.Food
+import org.example.model.Mineral
+import org.example.model.Vitamin
 
 /**
- * Р РµР°Р»РёР·Р°С†РёСЏ РёРЅС‚РµСЂС„РµР№СЃР° [IFoodAction].
- * РњРѕР¶РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ СЃ Р»РѕРєР°Р»СЊРЅРѕР№ Р‘Р” РёР»Рё С‡РµСЂРµР· API Gateway
+ * Реализация интерфейса [IFoodAction].
+ * Может работать с локальной БД или через API Gateway
  *
  * @see IFoodAction
- * @constructor РџСЂРёРЅРёРјР°РµС‚ РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ РїСЂРёР»РѕР¶РµРЅРёСЏ.
- * @property config РљРѕРЅС„РёРіСѓСЂР°С†РёСЏ РїСЂРёР»РѕР¶РµРЅРёСЏ, РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ Р°РґСЂРµСЃР° Р‘Р”
+ * @constructor Принимает конфигурацию приложения.
+ * @property config Конфигурация приложения, используется для определения адреса БД
  */
 class FoodAction(config: ApplicationConfig) : IFoodAction {
 
@@ -39,11 +41,11 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
   private val httpClient = HttpClient { install(ContentNegotiation) { json() } }
 
   /**
-   * РЎРѕР·РґР°С‘С‚ РЅРѕРІСѓСЋ РµРґСѓ Рё СЃРІСЏР·Р°РЅРЅС‹Рµ СЃ РЅРµР№ РІРёС‚Р°РјРёРЅС‹ Рё РјРёРЅРµСЂР°Р»С‹.
+   * Создаёт новую еду и связанные с ней витамины и минералы.
    *
-   * @param food Р•РґР° РґР»СЏ СЃРѕР·РґР°РЅРёСЏ
-   * @return РЎРѕР·РґР°РЅРЅР°СЏ Р•РґР°
-   * @throws IllegalStateException РµСЃР»Рё РІСЃС‚Р°РІРєР° РІ Р‘Р” РЅРµ СѓРґР°Р»Р°СЃСЊ.
+   * @param food Еда для создания
+   * @return Созданная Еда
+   * @throws IllegalStateException если вставка в БД не удалась.
    */
   override suspend fun createFood(food: Food): Food =
       withContext(Dispatchers.IO) {
@@ -115,29 +117,68 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
       }
 
   /**
-   * РџРѕР»СѓС‡Р°РµС‚ РµРґСѓ РїРѕ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂСѓ
+   * Получает еду по идентификатору
    *
-   * @param id РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РµРґС‹
-   * @return РќР°Р№РґРµРЅРЅР°СЏ [Food] РёР»Рё null, РµСЃР»Рё РЅРµ РЅР°Р№РґРµРЅР°
+   * @param id Идентификатор еды
+   * @return Найденная [Food] или null, если не найдена
    */
   override suspend fun getFood(id: String): Food? =
       withContext(Dispatchers.IO) {
-        val response =
-            httpClient.post("$baseUrl/read") {
+          val response = httpClient.post("$baseUrl/read") {
               contentType(ContentType.Application.Json)
               setBody(DbReadRequest("foods", filters = mapOf("id" to id)))
-            }
-        val foodRows: List<DbFoodRow> = response.body()
-        val food = foodRows.firstOrNull()?.toModel() ?: return@withContext null
-        food
+          }
+          val foodRows: List<DbFoodRow> = response.body()
+          val dbFood = foodRows.firstOrNull() ?: return@withContext null
+
+          val foodVitaminsJson = httpClient.post("$baseUrl/read") {
+              contentType(ContentType.Application.Json)
+              setBody(DbReadRequest("food_vitamins", filters = mapOf("food_id" to id)))
+          }.bodyAsText()
+          val foodMineralsJson = httpClient.post("$baseUrl/read") {
+              contentType(ContentType.Application.Json)
+              setBody(DbReadRequest("food_minerals", filters = mapOf("food_id" to id)))
+          }.bodyAsText()
+
+          val foodVitamins = Json.decodeFromString<List<DbFoodVitamin>>(foodVitaminsJson)
+          val foodMinerals = Json.decodeFromString<List<DbFoodMineral>>(foodMineralsJson)
+
+          val vitamins = httpClient.post("$baseUrl/read") {
+              contentType(ContentType.Application.Json)
+              setBody(DbReadRequest("vitamins"))
+          }.body<List<DbVitamin>>()
+
+          val minerals = httpClient.post("$baseUrl/read") {
+              contentType(ContentType.Application.Json)
+              setBody(DbReadRequest("minerals"))
+          }.body<List<DbMineral>>()
+
+          val vitaminMap = vitamins.associateBy { it.id }
+          val attachedVitamins = foodVitamins.mapNotNull { fv ->
+              vitaminMap[fv.vitamin_id]?.let {
+                  Vitamin(it.id, it.name, fv.amount, it.unit)
+              }
+          }
+
+          val mineralMap = minerals.associateBy { it.id }
+          val attachedMinerals = foodMinerals.mapNotNull { fm ->
+              mineralMap[fm.mineral_id]?.let {
+                  Mineral(it.id, it.name, fm.amount, it.unit)
+              }
+          }
+
+          return@withContext dbFood.toModel(
+              vitamins = attachedVitamins,
+              minerals = attachedMinerals
+          )
       }
 
   /**
-   * Р’РѕР·РІСЂР°С‰Р°РµС‚ РІСЃСЋ РµРґСѓ, РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ РѕС‚С„РёР»СЊС‚СЂРѕРІР°РЅРЅС‹Рµ РїРѕ РёРјРµРЅРё.
+   * Возвращает всю еду, опционально отфильтрованные по имени.
    *
-   * @param nameFilter РџРѕРґСЃС‚СЂРѕРєР° РґР»СЏ РїРѕРёСЃРєР° РІ РЅР°Р·РІР°РЅРёСЏС… (`ignoreCase = true`). Р•СЃР»Рё `null` РёР»Рё
-   * РїСѓСЃС‚Р°СЏ вЂ” РІРѕР·РІСЂР°С‰Р°СЋС‚СЃСЏ РІСЃРµ.
-   * @return РЎРїРёСЃРѕРє РѕР±СЉРµРєС‚РѕРІ [Food].
+   * @param nameFilter Подстрока для поиска в названиях (`ignoreCase = true`). Если `null` или
+   * пустая — возвращаются все.
+   * @return Список объектов [Food].
    */
   override suspend fun listFoods(nameFilter: String?): List<Food> =
       withContext(Dispatchers.IO) {
@@ -148,15 +189,72 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
                   setBody(DbReadRequest("foods"))
                 }
                 .bodyAsText()
-        val allFoods = Json.decodeFromString<List<DbFoodRow>>(responseText)
-        return@withContext allFoods.map { it.toModel() }
+        val foods = Json.decodeFromString<List<DbFoodRow>>(responseText)
+
+        val responseFoodVitamin =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("food_vitamins"))
+                }
+                .bodyAsText()
+        val responseFoodMineral =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("food_minerals"))
+                }
+                .bodyAsText()
+        val foodVitamins = Json.decodeFromString<List<DbFoodVitamin>>(responseFoodVitamin)
+        val foodMinerals = Json.decodeFromString<List<DbFoodMineral>>(responseFoodMineral)
+
+        val vitaminsByFood = foodVitamins.groupBy { it.food_id }
+        val mineralsByFood = foodMinerals.groupBy { it.food_id }
+
+        val responseVitamins =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("vitamins"))
+                }
+                .bodyAsText()
+        val responseMinerals =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("minerals"))
+                }
+                .bodyAsText()
+
+        val vitamins = Json.decodeFromString<List<DbVitamin>>(responseVitamins).associateBy { it.id }
+        val minerals = Json.decodeFromString<List<DbMineral>>(responseMinerals).associateBy { it.id }
+
+        return@withContext foods.map { dbFood ->
+          val foodId = dbFood.id
+
+          val foodVits =
+              vitaminsByFood[foodId].orEmpty().mapNotNull { link ->
+                vitamins[link.vitamin_id]?.let {
+                  Vitamin(id = it.id, name = it.name, amount = link.amount, unit = it.unit)
+                }
+              }
+
+          val foodMins =
+              mineralsByFood[foodId].orEmpty().mapNotNull { link ->
+                minerals[link.mineral_id]?.let {
+                  Mineral(id = it.id, name = it.name, amount = link.amount, unit = it.unit)
+                }
+              }
+
+          dbFood.toModel().copy(vitamins = foodVits, minerals = foodMins)
+        }
       }
 
   /**
-   * РЈРґР°Р»СЏРµС‚ РµРґСѓ РїРѕ РµС‘ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂСѓ.
+   * Удаляет еду по её идентификатору.
    *
-   * @param id РРґРµРЅС‚РёС„РёРєР°С‚РѕСЂ РµРґС‹.
-   * @return `true`, РµСЃР»Рё Р·Р°РїРёСЃСЊ Р±С‹Р»Р° СѓСЃРїРµС€РЅРѕ СѓРґР°Р»РµРЅР°, РёРЅР°С‡Рµ `false`.
+   * @param id Идентификатор еды.
+   * @return `true`, если запись была успешно удалена, иначе `false`.
    */
   override suspend fun deleteFood(id: String): Boolean =
       withContext(Dispatchers.IO) {
@@ -170,8 +268,17 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
             .success == true
       }
 
-  /** РџСЂРµРѕР±СЂР°Р·СѓРµС‚ DTO [DbFoodRow] РІ РґРѕРјРµРЅРЅС‹Р№ РѕР±СЉРµРєС‚ [Food]. */
-  private fun DbFoodRow.toModel() =
+  /**
+   * Преобразует DTO [DbFoodRow] в доменную модель [Food], связывая с ней витамины и минералы, если они переданы.
+   *
+   * @param vitamins Список витаминов, связанных с едой.
+   * @param minerals Список минералов, связанных с едой.
+   * @return Экземпляр [Food].
+   */
+  private fun DbFoodRow.toModel(
+      vitamins: List<Vitamin> = emptyList(),
+      minerals: List<Mineral> = emptyList(),
+  ) =
       Food(
           id = id,
           name = name,
@@ -183,6 +290,6 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
           transFats = trans_fats,
           fiber = fiber,
           sugar = sugar,
-          vitamins = vitamins ?: emptyList(),
-          minerals = minerals ?: emptyList())
+          vitamins = vitamins,
+          minerals = minerals)
 }
