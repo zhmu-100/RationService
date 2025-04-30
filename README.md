@@ -61,8 +61,22 @@ Response:
   "transFats": 0.0,
   "fiber": 0.0,
   "sugar": 0.0,
-  "vitamins": [],
-  "minerals": []
+  "vitamins": [
+    {
+      "id": "9cf38114-0147-4e16-afdss6d",
+      "name": "d3",
+      "amount": 12.0,
+      "unit": "ml"
+    }
+  ],
+  "minerals": [
+    {
+      "id": "9cfsd114-0147-4e16-a15b-389626d",
+      "name": "amega",
+      "amount": 13.0,
+      "unit": "l"
+    }
+  ]
 }
 ```
 
@@ -89,8 +103,22 @@ Response:
     "transFats": 0.0,
     "fiber": 0.0,
     "sugar": 0.0,
-    "vitamins": [],
-    "minerals": []
+    "vitamins": [
+      {
+        "id": "9cf38114-0147-4e16-afdss6d",
+        "name": "d3",
+        "amount": 12.0,
+        "unit": "ml"
+      }
+    ],
+    "minerals": [
+      {
+        "id": "9cfsd114-0147-4e16-a15b-389626d",
+        "name": "amega",
+        "amount": 13.0,
+        "unit": "l"
+      }
+    ]
   },
   {
     "id": "fcb0d064-5d6e-4b30-8f2c-2d5af4168b8e",
@@ -103,8 +131,22 @@ Response:
     "transFats": 0.0,
     "fiber": 3.5,
     "sugar": 0.7,
-    "vitamins": [],
-    "minerals": []
+    "vitamins": [
+      {
+        "id": "9cf38114-0147-4e16-afdss6d",
+        "name": "d3",
+        "amount": 12.0,
+        "unit": "ml"
+      }
+    ],
+    "minerals": [
+      {
+        "id": "9cfsd114-0147-4e16-a15b-389626d",
+        "name": "amega",
+        "amount": 13.0,
+        "unit": "l"
+      }
+    ]
   },
   {
     "id": "6fbf5984-34e0-45d2-890e-d11d3abc9168",
@@ -117,8 +159,22 @@ Response:
     "transFats": 0.0,
     "fiber": 0.0,
     "sugar": 3.2,
-    "vitamins": [],
-    "minerals": []
+    "vitamins": [
+      {
+        "id": "9cf38114-0147-4e16-afdss6d",
+        "name": "d3",
+        "amount": 12.0,
+        "unit": "ml"
+      }
+    ],
+    "minerals": [
+      {
+        "id": "9cfsd114-0147-4e16-a15b-389626d",
+        "name": "amega",
+        "amount": 13.0,
+        "unit": "l"
+      }
+    ]
   }
 ]
 ```
@@ -161,8 +217,22 @@ Response:
   "transFats": 0.0,
   "fiber": 0.0,
   "sugar": 3.2,
-  "vitamins": [],
-  "minerals": []
+  "vitamins": [
+    {
+      "id": "9cf38114-0147-4e16-afdss6d",
+      "name": "d3",
+      "amount": 12.0,
+      "unit": "ml"
+    }
+  ],
+  "minerals": [
+    {
+      "id": "9cfsd114-0147-4e16-a15b-389626d",
+      "name": "amega",
+      "amount": 13.0,
+      "unit": "l"
+    }
+  ]
 }
 ```
 
@@ -502,12 +572,49 @@ date       varchar(255) NOT NULL
 );
 ```
 
-Create linking table:
+Create Vitamins table:
+```sql
+CREATE TABLE vitamins (
+    id    VARCHAR(36) PRIMARY KEY,
+    name  TEXT NOT NULL,
+    unit  TEXT NOT NULL
+);
+```
+
+Create Minerals table:
+
+```sql
+CREATE TABLE minerals (
+    id    VARCHAR(36) PRIMARY KEY,
+    name  TEXT NOT NULL,
+    unit  TEXT NOT NULL
+);
+```
+
+Create linking tables:
 
 ```sql
 CREATE TABLE meal_foods (
     meal_id varchar(36) REFERENCES meals(id) ON DELETE CASCADE,
     food_id varchar(36) REFERENCES foods(id) ON DELETE CASCADE,
     PRIMARY KEY (meal_id, food_id)
+);
+```
+
+```sql
+CREATE TABLE food_minerals (
+    food_id     VARCHAR(36) REFERENCES foods(id) ON DELETE CASCADE,
+    mineral_id  VARCHAR(36) REFERENCES minerals(id) ON DELETE CASCADE,
+    amount      DOUBLE PRECISION NOT NULL CHECK (amount >= 0),
+    PRIMARY KEY (food_id, mineral_id)
+);
+```
+
+```sql
+CREATE TABLE food_vitamins (
+    food_id    VARCHAR(36) REFERENCES foods(id) ON DELETE CASCADE,
+    vitamin_id VARCHAR(36) REFERENCES vitamins(id) ON DELETE CASCADE,
+    amount     DOUBLE PRECISION NOT NULL CHECK (amount >= 0),
+    PRIMARY KEY (food_id, vitamin_id)
 );
 ```
