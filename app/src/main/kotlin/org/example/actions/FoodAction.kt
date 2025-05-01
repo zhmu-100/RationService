@@ -18,18 +18,17 @@ import org.example.model.Mineral
 import org.example.model.Vitamin
 
 /**
- * Реализация интерфейса [IFoodAction].
- * Может работать с локальной БД или через API Gateway
+ * пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ [IFoodAction]. пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ API Gateway
  *
  * @see IFoodAction
- * @constructor Принимает конфигурацию приложения.
- * @property config Конфигурация приложения, используется для определения адреса БД
+ * @constructor пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
+ * @property config пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ
  */
 class FoodAction(config: ApplicationConfig) : IFoodAction {
 
   private val dbMode = config.propertyOrNull("ktor.database.mode")?.getString() ?: "LOCAL"
   private val dbHost = config.propertyOrNull("ktor.database.host")?.getString() ?: "localhost"
-  private val dbPort = config.propertyOrNull("ktor.database.port")?.getString() ?: "8080"
+  private val dbPort = config.propertyOrNull("ktor.database.port")?.getString() ?: "8081"
 
   private val baseUrl =
       if (dbMode == "gateway") {
@@ -41,11 +40,11 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
   private val httpClient = HttpClient { install(ContentNegotiation) { json() } }
 
   /**
-   * Создаёт новую еду и связанные с ней витамины и минералы.
+   * пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
    *
-   * @param food Еда для создания
-   * @return Созданная Еда
-   * @throws IllegalStateException если вставка в БД не удалась.
+   * @param food пїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
+   * @return пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
+   * @throws IllegalStateException пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
    */
   override suspend fun createFood(food: Food): Food =
       withContext(Dispatchers.IO) {
@@ -117,68 +116,76 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
       }
 
   /**
-   * Получает еду по идентификатору
+   * пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ
    *
-   * @param id Идентификатор еды
-   * @return Найденная [Food] или null, если не найдена
+   * @param id пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ
+   * @return пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ [Food] пїЅпїЅпїЅ null, пїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
    */
   override suspend fun getFood(id: String): Food? =
       withContext(Dispatchers.IO) {
-          val response = httpClient.post("$baseUrl/read") {
+        val response =
+            httpClient.post("$baseUrl/read") {
               contentType(ContentType.Application.Json)
               setBody(DbReadRequest("foods", filters = mapOf("id" to id)))
-          }
-          val foodRows: List<DbFoodRow> = response.body()
-          val dbFood = foodRows.firstOrNull() ?: return@withContext null
+            }
+        val foodRows: List<DbFoodRow> = response.body()
+        val dbFood = foodRows.firstOrNull() ?: return@withContext null
 
-          val foodVitaminsJson = httpClient.post("$baseUrl/read") {
-              contentType(ContentType.Application.Json)
-              setBody(DbReadRequest("food_vitamins", filters = mapOf("food_id" to id)))
-          }.bodyAsText()
-          val foodMineralsJson = httpClient.post("$baseUrl/read") {
-              contentType(ContentType.Application.Json)
-              setBody(DbReadRequest("food_minerals", filters = mapOf("food_id" to id)))
-          }.bodyAsText()
+        val foodVitaminsJson =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("food_vitamins", filters = mapOf("food_id" to id)))
+                }
+                .bodyAsText()
+        val foodMineralsJson =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("food_minerals", filters = mapOf("food_id" to id)))
+                }
+                .bodyAsText()
 
-          val foodVitamins = Json.decodeFromString<List<DbFoodVitamin>>(foodVitaminsJson)
-          val foodMinerals = Json.decodeFromString<List<DbFoodMineral>>(foodMineralsJson)
+        val foodVitamins = Json.decodeFromString<List<DbFoodVitamin>>(foodVitaminsJson)
+        val foodMinerals = Json.decodeFromString<List<DbFoodMineral>>(foodMineralsJson)
 
-          val vitamins = httpClient.post("$baseUrl/read") {
-              contentType(ContentType.Application.Json)
-              setBody(DbReadRequest("vitamins"))
-          }.body<List<DbVitamin>>()
+        val vitamins =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("vitamins"))
+                }
+                .body<List<DbVitamin>>()
 
-          val minerals = httpClient.post("$baseUrl/read") {
-              contentType(ContentType.Application.Json)
-              setBody(DbReadRequest("minerals"))
-          }.body<List<DbMineral>>()
+        val minerals =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("minerals"))
+                }
+                .body<List<DbMineral>>()
 
-          val vitaminMap = vitamins.associateBy { it.id }
-          val attachedVitamins = foodVitamins.mapNotNull { fv ->
-              vitaminMap[fv.vitamin_id]?.let {
-                  Vitamin(it.id, it.name, fv.amount, it.unit)
-              }
-          }
+        val vitaminMap = vitamins.associateBy { it.id }
+        val attachedVitamins =
+            foodVitamins.mapNotNull { fv ->
+              vitaminMap[fv.vitamin_id]?.let { Vitamin(it.id, it.name, fv.amount, it.unit) }
+            }
 
-          val mineralMap = minerals.associateBy { it.id }
-          val attachedMinerals = foodMinerals.mapNotNull { fm ->
-              mineralMap[fm.mineral_id]?.let {
-                  Mineral(it.id, it.name, fm.amount, it.unit)
-              }
-          }
+        val mineralMap = minerals.associateBy { it.id }
+        val attachedMinerals =
+            foodMinerals.mapNotNull { fm ->
+              mineralMap[fm.mineral_id]?.let { Mineral(it.id, it.name, fm.amount, it.unit) }
+            }
 
-          return@withContext dbFood.toModel(
-              vitamins = attachedVitamins,
-              minerals = attachedMinerals
-          )
+        return@withContext dbFood.toModel(vitamins = attachedVitamins, minerals = attachedMinerals)
       }
 
   /**
-   * Возвращает всю еду, опционально отфильтрованные по имени.
+   * пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ.
    *
-   * @param nameFilter Подстрока для поиска в названиях (`ignoreCase = true`). Если `null` или
-   * пустая — возвращаются все.
-   * @return Список объектов [Food].
+   * @param nameFilter пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (`ignoreCase = true`). пїЅпїЅпїЅпїЅ `null` пїЅпїЅпїЅ
+   * пїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ.
+   * @return пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ [Food].
    */
   override suspend fun listFoods(nameFilter: String?): List<Food> =
       withContext(Dispatchers.IO) {
@@ -226,8 +233,10 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
                 }
                 .bodyAsText()
 
-        val vitamins = Json.decodeFromString<List<DbVitamin>>(responseVitamins).associateBy { it.id }
-        val minerals = Json.decodeFromString<List<DbMineral>>(responseMinerals).associateBy { it.id }
+        val vitamins =
+            Json.decodeFromString<List<DbVitamin>>(responseVitamins).associateBy { it.id }
+        val minerals =
+            Json.decodeFromString<List<DbMineral>>(responseMinerals).associateBy { it.id }
 
         return@withContext foods.map { dbFood ->
           val foodId = dbFood.id
@@ -251,10 +260,10 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
       }
 
   /**
-   * Удаляет еду по её идентификатору.
+   * пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
    *
-   * @param id Идентификатор еды.
-   * @return `true`, если запись была успешно удалена, иначе `false`.
+   * @param id пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ.
+   * @return `true`, пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅ `false`.
    */
   override suspend fun deleteFood(id: String): Boolean =
       withContext(Dispatchers.IO) {
@@ -269,11 +278,12 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
       }
 
   /**
-   * Преобразует DTO [DbFoodRow] в доменную модель [Food], связывая с ней витамины и минералы, если они переданы.
+   * пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ DTO [DbFoodRow] пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ [Food], пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅ
+   * пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ.
    *
-   * @param vitamins Список витаминов, связанных с едой.
-   * @param minerals Список минералов, связанных с едой.
-   * @return Экземпляр [Food].
+   * @param vitamins пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ.
+   * @param minerals пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅ.
+   * @return пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ [Food].
    */
   private fun DbFoodRow.toModel(
       vitamins: List<Vitamin> = emptyList(),

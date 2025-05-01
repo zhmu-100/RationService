@@ -10,23 +10,9 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.example.dto.CreateMealRequest
-import org.example.model.Food
 import org.example.model.Meal
+import org.example.service.IFoodService
 import org.example.service.IMealService
-
-/** Заглушка для еды С ней нужно что то придумать, мнен е нравится */
-private fun stubFood(id: String) =
-    Food(
-        id = id,
-        name = "",
-        description = "",
-        calories = 0.0,
-        protein = 0.0,
-        carbs = 0.0,
-        saturatedFats = 0.0,
-        transFats = 0.0,
-        fiber = 0.0,
-        sugar = 0.0)
 
 /**
  * REST роутер для работы с едой
@@ -38,13 +24,13 @@ private fun stubFood(id: String) =
  * - POST diet/meals - Create a new meal
  * - DELETE diet/meals/{id} - Delete meal by ID
  */
-fun Application.registerMealRoutes(mealService: IMealService) {
+fun Application.registerMealRoutes(mealService: IMealService, foodService: IFoodService) {
   routing {
     route("/diet/meals") {
       /** Создание нового приема пищи */
       post {
         val req = call.receive<CreateMealRequest>()
-        val foods = req.foods.map { stubFood(it.id) }
+        val foods = req.foods.mapNotNull { ref -> foodService.getFood(ref.id) }
         val meal =
             Meal(
                 id = "",

@@ -13,6 +13,7 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.example.dto.*
+import org.example.model.Food
 import org.example.model.Meal
 import org.example.model.MealType
 
@@ -23,10 +24,11 @@ import org.example.model.MealType
  * @property config Конфигурация приложения, используется для определения адреса БД
  */
 class MealAction(private val config: ApplicationConfig) : IMealAction {
+  private val foodAction = FoodAction(config)
 
   private val dbMode = config.propertyOrNull("ktor.database.mode")?.getString() ?: "LOCAL"
   private val dbHost = config.propertyOrNull("ktor.database.host")?.getString() ?: "localhost"
-  private val dbPort = config.propertyOrNull("ktor.database.port")?.getString() ?: "8080"
+  private val dbPort = config.propertyOrNull("ktor.database.port")?.getString() ?: "8081"
 
   private val baseUrl =
       if (dbMode == "gateway") {
@@ -116,20 +118,10 @@ class MealAction(private val config: ApplicationConfig) : IMealAction {
 
         val foodIds: List<String> = links.mapNotNull { it["food_id"]?.jsonPrimitive?.content }
 
-        val foods =
-            foodIds.map { fid ->
-              org.example.model.Food(
-                  id = fid,
-                  name = "",
-                  description = "",
-                  calories = 0.0,
-                  protein = 0.0,
-                  carbs = 0.0,
-                  saturatedFats = 0.0,
-                  transFats = 0.0,
-                  fiber = 0.0,
-                  sugar = 0.0)
-            }
+        val foods = mutableListOf<Food>()
+        for (fid in foodIds) {
+          foodAction.getFood(fid)?.let { foods += it }
+        }
 
         baseMeal.copy(foods = foods)
       }
@@ -170,20 +162,10 @@ class MealAction(private val config: ApplicationConfig) : IMealAction {
                       }
                       .body()
               val foodIds = links.mapNotNull { it["food_id"]?.jsonPrimitive?.content }
-              val foods =
-                  foodIds.map { fid ->
-                    org.example.model.Food(
-                        id = fid,
-                        name = "",
-                        description = "",
-                        calories = 0.0,
-                        protein = 0.0,
-                        carbs = 0.0,
-                        saturatedFats = 0.0,
-                        transFats = 0.0,
-                        fiber = 0.0,
-                        sugar = 0.0)
-                  }
+              val foods = mutableListOf<Food>()
+              for (fid in foodIds) {
+                foodAction.getFood(fid)?.let { foods += it }
+              }
               base.copy(foods = foods)
             }
             .filter { it.date >= start && it.date <= end }

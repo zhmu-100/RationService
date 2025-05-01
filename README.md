@@ -191,15 +191,31 @@ Body:
 
 ```json
 {
-  "name": "Greek Yogurt2",
+  "name": "Greek Yogurt1",
   "description": "Plain, non‑fat",
-  "calories": 59,
-  "protein": 10,
+  "calories": 59.0,
+  "protein": 10.0,
   "carbs": 3.6,
   "saturatedFats": 0.1,
-  "transFats": 0,
-  "fiber": 0,
-  "sugar": 3.2
+  "transFats": 0.0,
+  "fiber": 0.0,
+  "sugar": 3.2,
+  "vitamins": [
+    {
+      "id": "9cf38114-0147-4e16-afdss6d",
+      "name": "d3",
+      "amount": 12.0,
+      "unit": "ml"
+    }
+  ],
+  "minerals": [
+    {
+      "id": "9cfsd114-0147-4e16-a15b-389626d",
+      "name": "amega",
+      "amount": 13.0,
+      "unit": "l"
+    }
+  ]
 }
 ```
 
@@ -207,8 +223,8 @@ Response:
 
 ```json
 {
-  "id": "d066ee17-5a78-47b0-a6fc-a50846248663",
-  "name": "Greek Yogurt2",
+  "id": "7a1751db-91ac-4556-b8bb-d71d91bfcae6",
+  "name": "Greek Yogurt1",
   "description": "Plain, non‑fat",
   "calories": 59.0,
   "protein": 10.0,
@@ -348,60 +364,83 @@ Body:
 ```json
 {
   "userId": "u123",
-  "name": "Lunch combo2",
+  "name": "Lunch combo1",
   "mealType": "MEAL_TYPE_LUNCH",
   "foods": [
-    {
-      "id": "7d4f5b91-2be7-476d-92a2-3ca63eaa9f54"
-    },
-    {
-      "id": "fcb0d064-5d6e-4b30-8f2c-2d5af4168b8e"
-    }
+    { "id": "61e8505b-15a9-45b6-b44a-3c31cb08f393" },
+    { "id": "7a1751db-91ac-4556-b8bb-d71d91bfcae6" }
   ],
   "date": "2025-04-20T12:00:00"
 }
-
 ```
 
 Response:
 
 ```json
 {
-  "id": "01c0825a-c7ee-425f-af8a-960a17bfcfa4",
+  "id": "e7abbd8c-6c7c-42f5-a5ef-46752c22b54e",
   "userId": "u123",
-  "name": "Lunch combo2",
+  "name": "Lunch combo1",
   "mealType": "MEAL_TYPE_LUNCH",
   "foods": [
     {
-      "id": "7d4f5b91-2be7-476d-92a2-3ca63eaa9f54",
-      "name": "",
-      "description": "",
-      "calories": 0.0,
-      "protein": 0.0,
-      "carbs": 0.0,
-      "saturatedFats": 0.0,
+      "id": "61e8505b-15a9-45b6-b44a-3c31cb08f393",
+      "name": "Aboba",
+      "description": "Plain, non‑fat",
+      "calories": 59.0,
+      "protein": 10.0,
+      "carbs": 3.6,
+      "saturatedFats": 0.1,
       "transFats": 0.0,
       "fiber": 0.0,
-      "sugar": 0.0,
-      "vitamins": [],
-      "minerals": []
+      "sugar": 3.2,
+      "vitamins": [
+        {
+          "id": "9cf38114-0147-4e16-afdss6d",
+          "name": "d3",
+          "amount": 12.0,
+          "unit": "ml"
+        }
+      ],
+      "minerals": [
+        {
+          "id": "9cfsd114-0147-4e16-a15b-389626d",
+          "name": "amega",
+          "amount": 13.0,
+          "unit": "l"
+        }
+      ]
     },
     {
-      "id": "fcb0d064-5d6e-4b30-8f2c-2d5af4168b8e",
-      "name": "",
-      "description": "",
-      "calories": 0.0,
-      "protein": 0.0,
-      "carbs": 0.0,
-      "saturatedFats": 0.0,
+      "id": "7a1751db-91ac-4556-b8bb-d71d91bfcae6",
+      "name": "Greek Yogurt1",
+      "description": "Plain, non‑fat",
+      "calories": 59.0,
+      "protein": 10.0,
+      "carbs": 3.6,
+      "saturatedFats": 0.1,
       "transFats": 0.0,
       "fiber": 0.0,
-      "sugar": 0.0,
-      "vitamins": [],
-      "minerals": []
+      "sugar": 3.2,
+      "vitamins": [
+        {
+          "id": "9cf38114-0147-4e16-afdss6d",
+          "name": "d3",
+          "amount": 12.0,
+          "unit": "ml"
+        }
+      ],
+      "minerals": [
+        {
+          "id": "9cfsd114-0147-4e16-a15b-389626d",
+          "name": "amega",
+          "amount": 13.0,
+          "unit": "l"
+        }
+      ]
     }
   ],
-  "date": "2025-04-20T12:39:40.306882200"
+  "date": "2025-05-01T11:09:54.949956200"
 }
 ```
 

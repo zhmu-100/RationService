@@ -23,10 +23,11 @@ fun main() {
 
         val mealAction = MealAction(environment.config)
         val mealService = MealService(mealAction)
-        registerMealRoutes(mealService)
 
         val foodAction = FoodAction(environment.config)
         val foodService = FoodService(foodAction)
+
+        registerMealRoutes(mealService, foodService)
         registerFoodRoutes(foodService)
       }
       .start(wait = true)
