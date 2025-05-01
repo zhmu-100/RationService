@@ -2,20 +2,14 @@
 
 ## About
 
-Default configuration for this microservice:
+Default configuration for this microservice (env file):
 
 ```
-ktor {
-  deployment {
-    port = 8002
-    host = "0.0.0.0"
-  }
-  database {
-    mode = "LOCAL"        # or "GATEWAY"
-    host = "localhost"
-    port = 8080
-  }
-}
+PORT=8082
+
+DB_MODE=LOCAL        # LOCAL or gateway
+DB_HOST=localhost
+DB_PORT=8081
 ```
 
 Default port for this service is 8082. [App.kt](app/src/main/kotlin/org/example/App.kt)/

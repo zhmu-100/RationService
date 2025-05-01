@@ -1,5 +1,6 @@
 package org.example.actions
 
+import io.github.cdimascio.dotenv.dotenv
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -22,16 +23,15 @@ import org.example.model.Vitamin
  *
  * @see IFoodAction
  * @constructor ��������� ������������ ����������.
- * @property config ������������ ����������, ������������ ��� ����������� ������ ��
  */
-class FoodAction(config: ApplicationConfig) : IFoodAction {
+class FoodAction : IFoodAction {
 
-  private val dbMode = config.propertyOrNull("ktor.database.mode")?.getString() ?: "LOCAL"
-  private val dbHost = config.propertyOrNull("ktor.database.host")?.getString() ?: "localhost"
-  private val dbPort = config.propertyOrNull("ktor.database.port")?.getString() ?: "8081"
-
+  private val dotenv = dotenv()
+  private val dbMode = dotenv["DB_MODE"] ?: "LOCAL"
+  private val dbHost = dotenv["DB_HOST"] ?: "localhost"
+  private val dbPort = dotenv["DB_PORT"] ?: "8080"
   private val baseUrl =
-      if (dbMode == "gateway") {
+      if (dbMode.equals("gateway", true)) {
         "http://$dbHost:$dbPort/api/db"
       } else {
         "http://$dbHost:$dbPort"
