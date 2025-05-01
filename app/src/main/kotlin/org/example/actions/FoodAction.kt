@@ -1,5 +1,6 @@
 package org.example.actions
 
+import io.github.cdimascio.dotenv.dotenv
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -10,23 +11,27 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.config.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 import org.example.dto.*
 import org.example.model.Food
+import org.example.model.Mineral
+import org.example.model.Vitamin
 
 /**
- * Реализация интерфейса [IFoodAction]. Может работать с локальной БД или через API Gateway
+ * ���������� ���������� [IFoodAction]. ����� �������� � ��������� �� ��� ����� API Gateway
  *
  * @see IFoodAction
- * @property config Конфигурация приложения, используется для определения адреса БД
+ * @constructor ��������� ������������ ����������.
  */
-class FoodAction(config: ApplicationConfig) : IFoodAction {
+class FoodAction : IFoodAction {
 
-  private val dbMode = config.propertyOrNull("ktor.database.mode")?.getString() ?: "LOCAL"
-  private val dbHost = config.propertyOrNull("ktor.database.host")?.getString() ?: "localhost"
-  private val dbPort = config.propertyOrNull("ktor.database.port")?.getString() ?: "8080"
-
+  private val dotenv = dotenv()
+  private val dbMode = dotenv["DB_MODE"] ?: "LOCAL"
+  private val dbHost = dotenv["DB_HOST"] ?: "localhost"
+  private val dbPort = dotenv["DB_PORT"] ?: "8080"
   private val baseUrl =
-      if (dbMode == "gateway") {
+      if (dbMode.equals("gateway", true)) {
         "http://$dbHost:$dbPort/api/db"
       } else {
         "http://$dbHost:$dbPort"
@@ -35,14 +40,15 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
   private val httpClient = HttpClient { install(ContentNegotiation) { json() } }
 
   /**
-   * Создает новую еду
+   * ������ ����� ��� � ��������� � ��� �������� � ��������.
    *
-   * @param food Еда для создания
-   * @return Созданная Еда
+   * @param food ��� ��� ��������
+   * @return ��������� ���
+   * @throws IllegalStateException ���� ������� � �� �� �������.
    */
   override suspend fun createFood(food: Food): Food =
       withContext(Dispatchers.IO) {
-        val requestBody =
+        val foodRequest =
             DbCreateRequest(
                 table = "foods",
                 data =
@@ -57,66 +63,207 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
                         "trans_fats" to food.transFats.toString(),
                         "fiber" to food.fiber.toString(),
                         "sugar" to food.sugar.toString()))
-        val url = "$baseUrl/create"
-        val response: HttpResponse =
-            httpClient.post(url) {
+        httpClient
+            .post("$baseUrl/create") {
               contentType(ContentType.Application.Json)
-              setBody(requestBody)
+              setBody(foodRequest)
             }
+            .body<DbResponse>()
+            .let { if (!it.success!!) error(it.error ?: "DB insert failed") }
 
-        val dbResp: DbResponse = response.body()
-        if (dbResp.success == true) food else error(dbResp.error ?: "unknown error")
+        for (vitamin in food.vitamins) {
+          httpClient.post("$baseUrl/create") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                DbCreateRequest(
+                    "vitamins",
+                    mapOf("id" to vitamin.id, "name" to vitamin.name, "unit" to vitamin.unit)))
+          }
+
+          httpClient.post("$baseUrl/create") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                DbCreateRequest(
+                    "food_vitamins",
+                    mapOf(
+                        "food_id" to food.id,
+                        "vitamin_id" to vitamin.id,
+                        "amount" to vitamin.amount.toString())))
+          }
+        }
+
+        for (mineral in food.minerals) {
+          httpClient.post("$baseUrl/create") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                DbCreateRequest(
+                    "minerals",
+                    mapOf("id" to mineral.id, "name" to mineral.name, "unit" to mineral.unit)))
+          }
+
+          httpClient.post("$baseUrl/create") {
+            contentType(ContentType.Application.Json)
+            setBody(
+                DbCreateRequest(
+                    "food_minerals",
+                    mapOf(
+                        "food_id" to food.id,
+                        "mineral_id" to mineral.id,
+                        "amount" to mineral.amount.toString())))
+          }
+        }
+        food
       }
 
   /**
-   * Получает еду по идентификатору
+   * �������� ��� �� ��������������
    *
-   * @param id Идентификатор еды
-   * @return Найденная еда или null, если не найдена
+   * @param id ������������� ���
+   * @return ��������� [Food] ��� null, ���� �� �������
    */
   override suspend fun getFood(id: String): Food? =
       withContext(Dispatchers.IO) {
-        val body = DbReadRequest("foods", filters = mapOf("id" to id))
-        val rows: List<DbFoodRow> =
+        val response =
+            httpClient.post("$baseUrl/read") {
+              contentType(ContentType.Application.Json)
+              setBody(DbReadRequest("foods", filters = mapOf("id" to id)))
+            }
+        val foodRows: List<DbFoodRow> = response.body()
+        val dbFood = foodRows.firstOrNull() ?: return@withContext null
+
+        val foodVitaminsJson =
             httpClient
                 .post("$baseUrl/read") {
                   contentType(ContentType.Application.Json)
-                  setBody(body)
+                  setBody(DbReadRequest("food_vitamins", filters = mapOf("food_id" to id)))
                 }
-                .body()
-        rows.firstOrNull()?.toModel()
+                .bodyAsText()
+        val foodMineralsJson =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("food_minerals", filters = mapOf("food_id" to id)))
+                }
+                .bodyAsText()
+
+        val foodVitamins = Json.decodeFromString<List<DbFoodVitamin>>(foodVitaminsJson)
+        val foodMinerals = Json.decodeFromString<List<DbFoodMineral>>(foodMineralsJson)
+
+        val vitamins =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("vitamins"))
+                }
+                .body<List<DbVitamin>>()
+
+        val minerals =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("minerals"))
+                }
+                .body<List<DbMineral>>()
+
+        val vitaminMap = vitamins.associateBy { it.id }
+        val attachedVitamins =
+            foodVitamins.mapNotNull { fv ->
+              vitaminMap[fv.vitamin_id]?.let { Vitamin(it.id, it.name, fv.amount, it.unit) }
+            }
+
+        val mineralMap = minerals.associateBy { it.id }
+        val attachedMinerals =
+            foodMinerals.mapNotNull { fm ->
+              mineralMap[fm.mineral_id]?.let { Mineral(it.id, it.name, fm.amount, it.unit) }
+            }
+
+        return@withContext dbFood.toModel(vitamins = attachedVitamins, minerals = attachedMinerals)
       }
 
   /**
-   * Возвращает всю еду, опционально отфильтрованные по имени.
+   * ���������� ��� ���, ����������� ��������������� �� �����.
    *
-   * @param nameFilter Подстрока для поиска в названиях (`ignoreCase = true`). Если `null` или
-   * пустая — возвращаются все.
-   * @return Список объектов [Food].
+   * @param nameFilter ��������� ��� ������ � ��������� (`ignoreCase = true`). ���� `null` ���
+   * ������ � ������������ ���.
+   * @return ������ �������� [Food].
    */
   override suspend fun listFoods(nameFilter: String?): List<Food> =
       withContext(Dispatchers.IO) {
-        val ormFilters = emptyMap<String, String>()
-        val body = DbReadRequest("foods", filters = ormFilters)
-
-        val allRows: List<DbFoodRow> =
+        val responseText =
             httpClient
                 .post("$baseUrl/read") {
                   contentType(ContentType.Application.Json)
-                  setBody(body)
+                  setBody(DbReadRequest("foods"))
                 }
-                .body()
+                .bodyAsText()
+        val foods = Json.decodeFromString<List<DbFoodRow>>(responseText)
 
-        val foods = allRows.map { it.toModel() }
-        return@withContext if (nameFilter.isNullOrBlank()) foods
-        else foods.filter { it.name.contains(nameFilter, ignoreCase = true) }
+        val responseFoodVitamin =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("food_vitamins"))
+                }
+                .bodyAsText()
+        val responseFoodMineral =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("food_minerals"))
+                }
+                .bodyAsText()
+        val foodVitamins = Json.decodeFromString<List<DbFoodVitamin>>(responseFoodVitamin)
+        val foodMinerals = Json.decodeFromString<List<DbFoodMineral>>(responseFoodMineral)
+
+        val vitaminsByFood = foodVitamins.groupBy { it.food_id }
+        val mineralsByFood = foodMinerals.groupBy { it.food_id }
+
+        val responseVitamins =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("vitamins"))
+                }
+                .bodyAsText()
+        val responseMinerals =
+            httpClient
+                .post("$baseUrl/read") {
+                  contentType(ContentType.Application.Json)
+                  setBody(DbReadRequest("minerals"))
+                }
+                .bodyAsText()
+
+        val vitamins =
+            Json.decodeFromString<List<DbVitamin>>(responseVitamins).associateBy { it.id }
+        val minerals =
+            Json.decodeFromString<List<DbMineral>>(responseMinerals).associateBy { it.id }
+
+        return@withContext foods.map { dbFood ->
+          val foodId = dbFood.id
+
+          val foodVits =
+              vitaminsByFood[foodId].orEmpty().mapNotNull { link ->
+                vitamins[link.vitamin_id]?.let {
+                  Vitamin(id = it.id, name = it.name, amount = link.amount, unit = it.unit)
+                }
+              }
+
+          val foodMins =
+              mineralsByFood[foodId].orEmpty().mapNotNull { link ->
+                minerals[link.mineral_id]?.let {
+                  Mineral(id = it.id, name = it.name, amount = link.amount, unit = it.unit)
+                }
+              }
+
+          dbFood.toModel().copy(vitamins = foodVits, minerals = foodMins)
+        }
       }
 
   /**
-   * Удаляет еду по её идентификатору.
+   * ������� ��� �� � ��������������.
    *
-   * @param id Идентификатор еды.
-   * @return `true`, если запись была успешно удалена, иначе `false`.
+   * @param id ������������� ���.
+   * @return `true`, ���� ������ ���� ������� �������, ����� `false`.
    */
   override suspend fun deleteFood(id: String): Boolean =
       withContext(Dispatchers.IO) {
@@ -130,8 +277,18 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
             .success == true
       }
 
-  /** Преобразует DTO [DbFoodRow] в доменный объект [Food]. */
-  private fun DbFoodRow.toModel() =
+  /**
+   * ����������� DTO [DbFoodRow] � �������� ������ [Food], �������� � ��� �������� � ��������, ����
+   * ��� ��������.
+   *
+   * @param vitamins ������ ���������, ��������� � ����.
+   * @param minerals ������ ���������, ��������� � ����.
+   * @return ��������� [Food].
+   */
+  private fun DbFoodRow.toModel(
+      vitamins: List<Vitamin> = emptyList(),
+      minerals: List<Mineral> = emptyList(),
+  ) =
       Food(
           id = id,
           name = name,
@@ -142,5 +299,7 @@ class FoodAction(config: ApplicationConfig) : IFoodAction {
           saturatedFats = saturated_fats,
           transFats = trans_fats,
           fiber = fiber,
-          sugar = sugar)
+          sugar = sugar,
+          vitamins = vitamins,
+          minerals = minerals)
 }

@@ -48,6 +48,16 @@ data class DbFoodRow(
     val sugar: Double
 )
 
+@Serializable
+data class DbFoodVitamin(val food_id: String, val vitamin_id: String, val amount: Double)
+
+@Serializable
+data class DbFoodMineral(val food_id: String, val mineral_id: String, val amount: Double)
+
+@Serializable data class DbVitamin(val id: String, val name: String, val unit: String)
+
+@Serializable data class DbMineral(val id: String, val name: String, val unit: String)
+
 /**
  * Запрос на создание блюда
  *

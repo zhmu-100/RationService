@@ -1,5 +1,6 @@
 package org.example
 
+import io.github.cdimascio.dotenv.dotenv
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
@@ -12,21 +13,20 @@ import org.example.router.registerMealRoutes
 import org.example.service.FoodService
 import org.example.service.MealService
 
-/**
- * Точка входа в приложение
- *
- * Дефолтный порт - 8002, см в. [application.conf]
- */
+/** Точка входа в приложение */
 fun main() {
-  embeddedServer(Netty, port = 8002) {
+  val dotenv = dotenv()
+  val port = dotenv["PORT"]?.toIntOrNull() ?: 8001
+  embeddedServer(Netty, port = port) {
         install(ContentNegotiation) { json() }
 
-        val mealAction = MealAction(environment.config)
+        val mealAction = MealAction()
         val mealService = MealService(mealAction)
-        registerMealRoutes(mealService)
 
-        val foodAction = FoodAction(environment.config)
+        val foodAction = FoodAction()
         val foodService = FoodService(foodAction)
+
+        registerMealRoutes(mealService, foodService)
         registerFoodRoutes(foodService)
       }
       .start(wait = true)
