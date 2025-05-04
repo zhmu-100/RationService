@@ -10,6 +10,12 @@ PORT=8082
 DB_MODE=LOCAL        # LOCAL or gateway
 DB_HOST=localhost
 DB_PORT=8081
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
+LOGGER_ACTIVITY_CHANNEL=logger:activity
+LOGGER_ERROR_CHANNEL=logger:error
 ```
 
 Default port for this service is 8082. [App.kt](app/src/main/kotlin/org/example/App.kt)/
