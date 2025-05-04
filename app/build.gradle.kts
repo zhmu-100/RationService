@@ -17,6 +17,7 @@ plugins {
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
+    maven { url = uri("https://jitpack.io") }
 }
 
 dependencies {
@@ -32,6 +33,8 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.0")
     implementation ("org.jetbrains.kotlinx:kotlinx-datetime:0.3.2")
+
+    implementation("com.github.poplopok:Logger:1.0.6")
 
     implementation("io.ktor:ktor-client-core-jvm:2.2.4")
     implementation("io.ktor:ktor-client-cio-jvm:2.2.4")
