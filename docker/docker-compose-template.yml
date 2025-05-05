@@ -15,7 +15,7 @@ services:
       - app-data:/app/data
       - app-logs:/app/logs
       # - ./config/${DEPLOYMENT_ENV:-development}/${SERVICE_NAME:-diet-service}.conf:/app/config/application.conf
-      - ./${SERVICE_NAME}.conf:/app/config/application.conf
+      # - ./${SERVICE_NAME}.conf:/app/config/application.conf
       - ./${SERVICE_NAME:-diet-service}.env:/app/.env
       - ./${SERVICE_NAME:-diet-service}.env:/.env
     networks:
@@ -42,5 +42,3 @@ volumes:
     name: ${SERVICE_NAME:-diet-service}-data-${DEPLOYMENT_ENV:-development}
   app-logs:
     name: ${SERVICE_NAME:-diet-service}-logs-${DEPLOYMENT_ENV:-development}
-  postgres-data:
-    name: ${SERVICE_NAME:-diet-service}-postgres-data-${DEPLOYMENT_ENV:-development}
