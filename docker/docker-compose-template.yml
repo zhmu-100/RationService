@@ -1,0 +1,46 @@
+services:
+  app:
+    image: ${REGISTRY:-localhost}/${SERVICE_NAME:-diet-service}:${SERVICE_VERSION:-latest}
+    container_name: ${SERVICE_NAME:-diet-service}
+    restart: always
+    environment:
+      - SERVICE_ENV=${DEPLOYMENT_ENV:-development}
+      - JAVA_OPTS=-Xmx512m -Xms256m
+      # Additional environment variables will be loaded from env file
+    env_file:
+      - ./${SERVICE_NAME:-diet-service}.env
+    ports:
+      - "${PORT:-8080}:8080"
+    volumes:
+      - app-data:/app/data
+      - app-logs:/app/logs
+      # - ./config/${DEPLOYMENT_ENV:-development}/${SERVICE_NAME:-diet-service}.conf:/app/config/application.conf
+      - ./${SERVICE_NAME}.conf:/app/config/application.conf
+      - ./${SERVICE_NAME:-diet-service}.env:/app/.env
+      - ./${SERVICE_NAME:-diet-service}.env:/.env
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+
+networks:
+  app-network:
+    external: true
+
+volumes:
+  app-data:
+    name: ${SERVICE_NAME:-diet-service}-data-${DEPLOYMENT_ENV:-development}
+  app-logs:
+    name: ${SERVICE_NAME:-diet-service}-logs-${DEPLOYMENT_ENV:-development}
+  postgres-data:
+    name: ${SERVICE_NAME:-diet-service}-postgres-data-${DEPLOYMENT_ENV:-development}
