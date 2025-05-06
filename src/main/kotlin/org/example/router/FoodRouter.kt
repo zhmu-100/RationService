@@ -71,8 +71,9 @@ fun Application.registerFoodRoutes(foodService: IFoodService) {
 
           if (food == null) {
             logger.logActivity("API: Еда не найдена", additionalData = mapOf("id" to id))
-            //call.respond(HttpStatusCode.NotFound)
-            call.respond(HttpStatusCode.NotFound, mapOf("status" to "error", "message" to "Food not found"))
+            // call.respond(HttpStatusCode.NotFound)
+            call.respond(
+                HttpStatusCode.NotFound, mapOf("status" to "error", "message" to "Food not found"))
             return@get
           }
 
