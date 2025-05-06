@@ -210,6 +210,7 @@ class FoodAction : IFoodAction {
         logger.logActivity("Получение еды по ID", additionalData = mapOf("id" to id))
 
         try {
+          println("Baseurl " + baseUrl)
           val response =
               httpClient.post("$baseUrl/read") {
                 contentType(ContentType.Application.Json)
